@@ -1,1 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shape Detector</title>
+
+    <!-- TensorFlow + Teachable Machine -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        #webcam-container {
+            margin-top: 20px;
+        }
+
+        #label-container {
+            margin-top: 20px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>✋ Shape Detector (Hand Gestures)</h1>
+
+    <p>Make a shape with your hands in front of the camera</p>
+
+    <button onclick="init()">Start Camera</button>
+
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+
+    <script type="text/javascript">
+
+        // 🔴 IMPORTANT: Replace this with YOUR exported model folder or URL
+        const URL = "./my_model/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        // Start everything
+        async function init() {
+
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            // Load model
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            // Setup webcam
+            webcam = new tmImage.Webcam(300, 300, true);
+            await webcam.setup();   // ask for camera permission
+            await webcam.play();
+
+            window.requestAnimationFrame(loop);
+
+            // Add webcam to page
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+            // Create labels
+            labelContainer = document.getElementById("label-container");
+
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        // Loop camera feed forever
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        // AI prediction function
+        async function predict() {
+
+            const prediction = await model.predict(webcam.canvas);
+
+            let bestGuess = "";
+            let highestProb = 0;
+
+            for (let i = 0; i < maxPredictions; i++) {
+
+                const className = prediction[i].className;
+                const probability = prediction[i].probability;
+
+                // Display all predictions
+                labelContainer.childNodes[i].innerHTML =
+                    className + ": " + (probability * 100).toFixed(1) + "%";
+
+                // Track best match
+                if (probability > highestProb) {
+                    highestProb = probability;
+                    bestGuess = className;
+                }
+            }
+
+            // Highlight strongest prediction
+            labelContainer.innerHTML =
+                "🧠 Detected Shape: " + bestGuess + " (" + (highestProb * 100).toFixed(1) + "%)<br><br>" +
+                labelContainer.innerHTML;
+        }
+
+    </script>
+
+</body>
+</html>
+
 
